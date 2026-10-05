@@ -1,5 +1,5 @@
 services:
-  # 1. Backend API Service
+  # 1. Backend API Service (Node.js)
   - type: web
     name: nexus-cob-api
     env: node
@@ -11,11 +11,10 @@ services:
       - key: PORT
         value: 10000
 
-  # 2. Frontend Static Site
+  # 2. Frontend Static Site (React/Vite)
   - type: web
     name: nexus-cob-app
     env: static
-    region: oregon
     plan: free
     buildCommand: cd client && npm install && npm run build
     staticPublishPath: ./client/dist
