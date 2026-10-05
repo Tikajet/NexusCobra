@@ -12,9 +12,8 @@ services:
         value: 10000
 
   # 2. Frontend Static Site (React/Vite)
-  - type: web
+  - type: static
     name: nexus-cob-app
-    env: static
     buildCommand: cd client && npm install && npm run build
     staticPublishPath: ./client/dist
     routes:
@@ -23,7 +22,7 @@ services:
         destination: /index.html
 
 databases:
-  # 3. PostgreSQL Database
+  # 3. Banco de Dados PostgreSQL
   - name: nexus-cob-db
     region: oregon
     plan: free
