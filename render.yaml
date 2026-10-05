@@ -12,8 +12,9 @@ services:
         value: 10000
 
   # 2. Frontend Static Site (React/Vite)
-  - type: static
+  - type: web
     name: nexus-cob-app
+    env: static
     buildCommand: cd client && npm install && npm run build
     staticPublishPath: ./client/dist
     routes:
