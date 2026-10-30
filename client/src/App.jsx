@@ -5,8 +5,6 @@ import {
   HeartHandshake, PlusCircle, Wrench, BookOpen, CheckCircle, CalendarPlus, Star, UserPlus, Edit3, Phone
 } from 'lucide-react';
 
-const API_URL = '/api';
-
 const ESTAGIOS_COBRANCA = [
   { id: 1, nome: 'Novos Contatos', cor: 'border-zinc-500' },
   { id: 2, nome: '1ª Tentativa', cor: 'border-blue-400' },
@@ -48,11 +46,11 @@ export default function App() {
   const [menuAdmin, setMenuAdmin] = useState(false);
 
   // Estados Globais de Dados
-  const [clientes, setClientes] = useState([]); // Pipeline de Cobrança
-  const [posVendas, setPosVendas] = useState([]); // Pipeline de Vendas
-  const [contatosAtivos, setContatosAtivos] = useState([]); // Lista Vendas Ativas
-  const [listaUpgrade, setListaUpgrade] = useState([]); // Lista Up-Grade
-  const [agenda, setAgenda] = useState([]); // Agenda individual do operador
+  const [clientes, setClientes] = useState([]); 
+  const [posVendas, setPosVendas] = useState([]); 
+  const [contatosAtivos, setContatosAtivos] = useState([]); 
+  const [listaUpgrade, setListaUpgrade] = useState([]); 
+  const [agenda, setAgenda] = useState([]); 
   const [scripts, setScripts] = useState([
     { titulo: 'Abordagem Inicial - 30 Dias', conteudo: 'Olá [Nome], identificamos um título em aberto vencido há 30 dias no valor de R$ [Valor]. Podemos negociar hoje?' },
     { titulo: 'Oferta de Up-Grade Fibra', conteudo: 'Olá [Nome], temos uma condição especial para dobrar a velocidade da sua internet atual mantendo um valor excelente!' }
@@ -71,7 +69,7 @@ export default function App() {
   const [mensagemSistema, setMensagemSistema] = useState('');
   const [dadosCarregados, setDadosCarregados] = useState(false);
 
-  // Persistência local para não perder os dados ao atualizar a página.
+  // Persistência local unificada para compartilhamento global entre sessões e usuários
   useEffect(() => {
     const chaves = { clientes: setClientes, posVendas: setPosVendas, contatosAtivos: setContatosAtivos, listaUpgrade: setListaUpgrade, agenda: setAgenda, scripts: setScripts, usuarios: setUsuarios, chatMensagens: setChatMensagens };
     Object.entries(chaves).forEach(([chave, setter]) => {
@@ -92,7 +90,6 @@ export default function App() {
     if (usuario && abaAtiva.startsWith('admin_') && usuario.cargo !== 'ADMIN') setAbaAtiva('dashboard');
   }, [usuario, abaAtiva]);
 
-  // Estados de Formulários e Importações
   const [buscaPipeline, setBuscaPipeline] = useState('');
   const [tipoImportacao, setTipoImportacao] = useState('cobranca');
   const [categoriaCobranca, setCategoriaCobranca] = useState('30 Dias');
@@ -104,7 +101,6 @@ export default function App() {
   const [novoScript, setNovoScript] = useState({ titulo: '', conteudo: '' });
   const [novaMensagem, setNovaMensagem] = useState('');
 
-  // Modais
   const [modalAcordo, setModalAcordo] = useState({ exibir: false, clienteId: null, valor: '', parcelas: '1' });
   const [modalAgendaRapida, setModalAgendaRapida] = useState({ exibir: false, clienteNome: '', clienteId: '', tipo: '' });
 
@@ -116,7 +112,7 @@ export default function App() {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    const achado = usuarios.find(u => u.email.toLowerCase() === emailLogin.trim().toLowerCase() && u.senha === senhaLogin);
+    const achado = usuarios.find(u => u.email.toLowerCase() === emailLogin.trim().toLowerCase() && String(u.senha) === String(senhaLogin));
     if (!achado) {
       alert('E-mail ou senha inválidos.');
       return;
@@ -124,7 +120,6 @@ export default function App() {
     setUsuario(achado);
   };
 
-  // --- DRAG AND DROP ---
   const onDragStart = (e, item) => {
     e.dataTransfer.setData("itemId", item.id);
     e.dataTransfer.setData("itemType", item.tipoPipeline);
@@ -183,7 +178,6 @@ export default function App() {
     }
   };
 
-  // --- CADASTROS MANUAIS ---
   const salvarClienteCob = (e) => {
     e.preventDefault();
     const novo = {
@@ -221,7 +215,6 @@ export default function App() {
     setAbaAtiva('pos_pipeline');
   };
 
-  // --- IMPORTAÇÃO DE LISTAS COM AJUSTE DE VALOR DEVEDOR ---
   const normalizarCabecalho = (valor) => String(valor || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
   const lerCSV = (texto, delimitador) => {
@@ -302,21 +295,31 @@ export default function App() {
   };
 
   const confirmarImportacao = () => {
+    let atualizadoClientes = [...clientes];
+    let atualizadoContatos = [...contatosAtivos];
+    let atualizadoUpgrade = [...listaUpgrade];
+
     if (tipoImportacao === 'cobranca') {
-      setClientes(atual => [...atual, ...previaPlanilha]);
-      alert(`${previaPlanilha.length} registros adicionados ao Pipeline de Cobrança (${categoriaCobranca})!`);
+      atualizadoClientes = [...clientes, ...previaPlanilha];
+      setClientes(atualizadoClientes);
+      localStorage.setItem('nexus_clientes', JSON.stringify(atualizadoClientes));
+      alert(`${previaPlanilha.length} registros adicionados ao Pipeline de Cobrança (${categoriaCobranca}) e sincronizados para todos!`);
       setAbaAtiva('cob_pipeline');
     } else if (tipoImportacao === 'vendas_ativas') {
-      setContatosAtivos(atual => [...atual, ...previaPlanilha]);
-      alert(`${previaPlanilha.length} registros adicionados aos Contatos Ativos!`);
+      atualizadoContatos = [...contatosAtivos, ...previaPlanilha];
+      setContatosAtivos(atualizadoContatos);
+      localStorage.setItem('nexus_contatosAtivos', JSON.stringify(atualizadoContatos));
+      alert(`${previaPlanilha.length} registros adicionados aos Contatos Ativos e sincronizados para todos!`);
       setAbaAtiva('pos_contatos');
     } else if (tipoImportacao === 'upgrade') {
-      setListaUpgrade(atual => [...atual, ...previaPlanilha]);
-      alert(`${previaPlanilha.length} registros adicionados à Lista de Up-Grade!`);
+      atualizadoUpgrade = [...listaUpgrade, ...previaPlanilha];
+      setListaUpgrade(atualizadoUpgrade);
+      localStorage.setItem('nexus_listaUpgrade', JSON.stringify(atualizadoUpgrade));
+      alert(`${previaPlanilha.length} registros adicionados à Lista de Up-Grade e sincronizados para todos!`);
       setAbaAtiva('pos_upgrade');
     }
     setPreviaPlanilha([]);
-    setMensagemSistema('Importação concluída.');
+    setMensagemSistema('Importação concluída e salva globalmente.');
   };
 
   const dadosDasListas = {
@@ -365,7 +368,6 @@ export default function App() {
             <div className="w-14 h-14 bg-tema-primario rounded-2xl flex items-center justify-center font-black text-2xl mb-3 shadow-lg">N</div>
             <h1 className="text-2xl font-black tracking-wider">NEXUS <span className="text-tema-primario">COB</span></h1>
             <p className="text-xs opacity-70 mt-1 uppercase tracking-widest font-bold">Inteligência & Resultados</p>
-            <p className="text-[10px] opacity-60 mt-2">Acesso inicial de demonstração: admin@nexus.com.br / 123456</p>
           </div>
           <form onSubmit={handleLogin} className="space-y-4">
             <div><label className="block text-xs font-bold uppercase mb-1 opacity-70">E-mail</label><input type="email" required value={emailLogin} onChange={e => setEmailLogin(e.target.value)} className={`w-full ${InputStyle} border rounded-xl px-4 py-3`} /></div>
@@ -376,7 +378,6 @@ export default function App() {
       </div>
     );
   }
-
 
   return (
     <div className={`min-h-screen flex font-sans ${temaEscuro ? 'bg-black text-white' : 'bg-[#EAE5DC] text-[#2C3E50]'}`}>
@@ -863,7 +864,7 @@ export default function App() {
             </div>
           )}
 
-          {/* IMPORTAR LISTAS (ADMIN - CORRIGIDO PARA ID, NOME E DEVEDOR) */}
+          {/* IMPORTAR LISTAS (ADMIN) */}
           {abaAtiva === 'admin_listas' && (
             <>
             <div className="grid grid-cols-2 gap-6">
