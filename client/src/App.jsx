@@ -45,7 +45,6 @@ export default function App() {
   const [menuPosVenda, setMenuPosVenda] = useState(false);
   const [menuAdmin, setMenuAdmin] = useState(false);
 
-  // Estados Globais de Dados
   const [clientes, setClientes] = useState([]); 
   const [posVendas, setPosVendas] = useState([]); 
   const [contatosAtivos, setContatosAtivos] = useState([]); 
@@ -69,7 +68,6 @@ export default function App() {
   const [mensagemSistema, setMensagemSistema] = useState('');
   const [dadosCarregados, setDadosCarregados] = useState(false);
 
-  // Persistência local unificada para compartilhamento global entre sessões e usuários
   useEffect(() => {
     const chaves = { clientes: setClientes, posVendas: setPosVendas, contatosAtivos: setContatosAtivos, listaUpgrade: setListaUpgrade, agenda: setAgenda, scripts: setScripts, usuarios: setUsuarios, chatMensagens: setChatMensagens };
     Object.entries(chaves).forEach(([chave, setter]) => {
@@ -242,7 +240,7 @@ export default function App() {
     if (!file) return;
     const extensao = file.name.split('.').pop().toLowerCase();
     if (!['csv', 'txt'].includes(extensao)) {
-      alert('Este importador aceita arquivos CSV ou TXT delimitados por vírgula, ponto e vírgula ou tabulação. Salve sua planilha Excel como CSV e tente novamente.');
+      alert('Este importador aceita arquivos CSV ou TXT delimitados por vírgula, ponto e vírgula ou tabulação.');
       e.target.value = '';
       return;
     }
@@ -263,7 +261,7 @@ export default function App() {
         plano: indice('plano', 'planocontratado', 'planoatual'),
         valor_plano: indice('valorplano', 'valordoplano', 'precoplano')
       };
-      if (col.nome < 0) throw new Error('Não encontrei a coluna Nome/Cliente. Confira o cabeçalho da planilha.');
+      if (col.nome < 0) throw new Error('Não encontrei a coluna Nome/Cliente.');
       const registros = linhas.slice(1).map((linha, i) => {
         const valor = (idx, padrao = '') => idx >= 0 ? (linha[idx] || padrao) : padrao;
         const registro = {
@@ -295,31 +293,27 @@ export default function App() {
   };
 
   const confirmarImportacao = () => {
-    let atualizadoClientes = [...clientes];
-    let atualizadoContatos = [...contatosAtivos];
-    let atualizadoUpgrade = [...listaUpgrade];
-
     if (tipoImportacao === 'cobranca') {
-      atualizadoClientes = [...clientes, ...previaPlanilha];
-      setClientes(atualizadoClientes);
-      localStorage.setItem('nexus_clientes', JSON.stringify(atualizadoClientes));
-      alert(`${previaPlanilha.length} registros adicionados ao Pipeline de Cobrança (${categoriaCobranca}) e sincronizados para todos!`);
+      const atualizados = [...clientes, ...previaPlanilha];
+      setClientes(atualizados);
+      localStorage.setItem('nexus_clientes', JSON.stringify(atualizados));
+      alert(`${previaPlanilha.length} registros adicionados ao Pipeline de Cobrança!`);
       setAbaAtiva('cob_pipeline');
     } else if (tipoImportacao === 'vendas_ativas') {
-      atualizadoContatos = [...contatosAtivos, ...previaPlanilha];
-      setContatosAtivos(atualizadoContatos);
-      localStorage.setItem('nexus_contatosAtivos', JSON.stringify(atualizadoContatos));
-      alert(`${previaPlanilha.length} registros adicionados aos Contatos Ativos e sincronizados para todos!`);
+      const atualizados = [...contatosAtivos, ...previaPlanilha];
+      setContatosAtivos(atualizados);
+      localStorage.setItem('nexus_contatosAtivos', JSON.stringify(atualizados));
+      alert(`${previaPlanilha.length} registros adicionados aos Contatos Ativos!`);
       setAbaAtiva('pos_contatos');
     } else if (tipoImportacao === 'upgrade') {
-      atualizadoUpgrade = [...listaUpgrade, ...previaPlanilha];
-      setListaUpgrade(atualizadoUpgrade);
-      localStorage.setItem('nexus_listaUpgrade', JSON.stringify(atualizadoUpgrade));
-      alert(`${previaPlanilha.length} registros adicionados à Lista de Up-Grade e sincronizados para todos!`);
+      const atualizados = [...listaUpgrade, ...previaPlanilha];
+      setListaUpgrade(atualizados);
+      localStorage.setItem('nexus_listaUpgrade', JSON.stringify(atualizados));
+      alert(`${previaPlanilha.length} registros adicionados à Lista de Up-Grade!`);
       setAbaAtiva('pos_upgrade');
     }
     setPreviaPlanilha([]);
-    setMensagemSistema('Importação concluída e salva globalmente.');
+    setMensagemSistema('Importação concluída e sincronizada globalmente.');
   };
 
   const dadosDasListas = {
@@ -342,7 +336,7 @@ export default function App() {
   const excluirSelecionadosLista = (tipo) => {
     const selecionados = listasSelecionadas[tipo];
     if (!selecionados.length) return alert('Selecione pelo menos um registro.');
-    if (!confirm(`Confirma a exclusão de ${selecionados.length} registro(s) da lista ${dadosDasListas[tipo].titulo}? Esta ação não poderá ser desfeita.`)) return;
+    if (!confirm(`Confirma a exclusão de ${selecionados.length} registro(s)?`)) return;
     const { dados, setter } = dadosDasListas[tipo];
     setter(dados.filter(item => !selecionados.includes(item.id)));
     setListasSelecionadas(atual => ({ ...atual, [tipo]: [] }));
@@ -351,7 +345,7 @@ export default function App() {
   const excluirListaInteira = (tipo) => {
     const { titulo, dados, setter } = dadosDasListas[tipo];
     if (!dados.length) return alert('Esta lista já está vazia.');
-    const palavra = prompt(`ATENÇÃO: serão excluídos permanentemente ${dados.length} registros de ${titulo}. Digite EXCLUIR para confirmar:`);
+    const palavra = prompt(`Digite EXCLUIR para confirmar a limpeza de ${titulo}:`);
     if (palavra !== 'EXCLUIR') return;
     setter([]);
     setListasSelecionadas(atual => ({ ...atual, [tipo]: [] }));
@@ -382,13 +376,12 @@ export default function App() {
   return (
     <div className={`min-h-screen flex font-sans ${temaEscuro ? 'bg-black text-white' : 'bg-[#EAE5DC] text-[#2C3E50]'}`}>
       
-      {/* MODAL AGENDA RÁPIDA */}
       {modalAgendaRapida.exibir && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
           <div className={`${CardStyle} border p-6 rounded-3xl max-w-sm w-full text-center space-y-4`}>
             <CalendarPlus className="w-12 h-12 text-tema-primario mx-auto" />
             <h3 className="text-lg font-bold">Agendar Retorno</h3>
-            <p className="text-sm opacity-70">Adicionar <b>{modalAgendaRapida.clienteNome}</b> para retorno amanhã?</p>
+            <p className="text-sm opacity-70">Adicionar <b>{modalAgendaRapida.clienteNome}</b> para amanhã?</p>
             <div className="flex space-x-2 pt-4">
               <button onClick={() => setModalAgendaRapida({exibir:false, clienteNome:'', clienteId:'', tipo:''})} className="w-1/2 bg-zinc-500/20 py-3 rounded-xl font-bold">Cancelar</button>
               <button onClick={confirmarAgendaRapida} className="w-1/2 bg-tema-primario py-3 rounded-xl font-black">Confirmar</button>
@@ -397,7 +390,6 @@ export default function App() {
         </div>
       )}
 
-      {/* MODAL ACORDO */}
       {modalAcordo.exibir && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
           <div className={`${CardStyle} border p-6 rounded-3xl max-w-md w-full space-y-4`}>
@@ -413,7 +405,6 @@ export default function App() {
         </div>
       )}
 
-      {/* SIDEBAR */}
       <aside className={`w-[260px] ${temaEscuro ? 'bg-[#0a0a0a] border-zinc-900' : 'bg-[#EAE5DC] border-[#DCD6CC]'} border-r flex flex-col justify-between p-4 shadow-xl z-10 shrink-0`}>
         <div className="space-y-6">
           <div className="flex items-center space-x-3 px-2">
@@ -429,7 +420,6 @@ export default function App() {
               <BarChart2 className="w-4 h-4"/> <span>Dashboard / Ranking</span>
             </button>
 
-            {/* Menu Cobrança */}
             <div>
               <button onClick={() => setMenuCobranca(!menuCobranca)} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl ${abaAtiva.startsWith('cob_') ? 'text-tema-primario' : 'opacity-70 hover:opacity-100'}`}>
                 <div className="flex items-center space-x-3"><Users className="w-4 h-4"/><span>COBRANÇA</span></div>
@@ -447,7 +437,6 @@ export default function App() {
               )}
             </div>
 
-            {/* Menu Vendas / Pós-Vendas */}
             <div>
               <button onClick={() => setMenuPosVenda(!menuPosVenda)} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl ${abaAtiva.startsWith('pos_') ? 'text-tema-primario' : 'opacity-70 hover:opacity-100'}`}>
                 <div className="flex items-center space-x-3"><HeartHandshake className="w-4 h-4"/><span>PÓS-VENDAS</span></div>
@@ -466,7 +455,6 @@ export default function App() {
               )}
             </div>
 
-            {/* Menu Admin */}
             {usuario.cargo === 'ADMIN' && <div>
               <button onClick={() => setMenuAdmin(!menuAdmin)} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl ${abaAtiva.startsWith('admin_') ? 'text-tema-primario' : 'opacity-70 hover:opacity-100'}`}>
                 <div className="flex items-center space-x-3"><Settings className="w-4 h-4"/><span>ADMINISTRAÇÃO</span></div>
@@ -498,7 +486,6 @@ export default function App() {
         </div>
       </aside>
 
-      {/* CONTEÚDO PRINCIPAL */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         <header className={`h-16 ${CardStyle} border-b flex items-center justify-between px-6 shrink-0`}>
           <h2 className="text-sm font-black uppercase tracking-wider text-tema-primario">{abaAtiva.replace('_', ' - ')}</h2>
@@ -510,7 +497,6 @@ export default function App() {
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           
-          {/* DASHBOARD */}
           {abaAtiva === 'dashboard' && (
             <div className="space-y-6">
               <div className="grid grid-cols-3 gap-6">
@@ -519,7 +505,6 @@ export default function App() {
                 <div className={`${CardStyle} border p-5 rounded-3xl`}><h3 className="font-bold border-b border-zinc-500/30 pb-3 mb-3">Listas de Up-Grade</h3><p className="text-3xl font-black text-purple-500">{listaUpgrade.length} Prontos</p></div>
               </div>
 
-              {/* RANKING E VALORES DE ACORDOS PAGOS E VENDAS */}
               <div className="grid grid-cols-2 gap-6">
                 <div className={`${CardStyle} border p-6 rounded-3xl space-y-4`}>
                   <h3 className="font-bold text-tema-primario border-b border-zinc-500/30 pb-2">Ranking de Acordos Pagos (Valores)</h3>
@@ -537,10 +522,7 @@ export default function App() {
                       const ranking = Object.entries(porOperador).sort((a,b) => b[1].valor - a[1].valor);
                       return ranking.map(([op, dados], idx) => (
                         <div key={idx} className="p-3 bg-zinc-500/10 border border-zinc-500/20 rounded-xl text-xs flex justify-between items-center">
-                          <div>
-                            <p className="font-bold">{idx + 1}. {op}</p>
-                            <p className="opacity-70 text-[10px]">{dados.qtd} acordo(s) pago(s)</p>
-                          </div>
+                          <div><p className="font-bold">{idx + 1}. {op}</p><p className="opacity-70 text-[10px]">{dados.qtd} acordo(s) pago(s)</p></div>
                           <span className="text-green-500 font-black text-sm">R$ {dados.valor.toFixed(2)}</span>
                         </div>
                       ));
@@ -563,10 +545,7 @@ export default function App() {
                       const rankingV = Object.entries(porVendedor).sort((a,b) => b[1].valor - a[1].valor);
                       return rankingV.map(([vend, dados], idx) => (
                         <div key={idx} className="p-3 bg-zinc-500/10 border border-zinc-500/20 rounded-xl text-xs flex justify-between items-center">
-                          <div>
-                            <p className="font-bold">{idx + 1}. {vend}</p>
-                            <p className="opacity-70 text-[10px]">{dados.qtd} venda(s) registrada(s)</p>
-                          </div>
+                          <div><p className="font-bold">{idx + 1}. {vend}</p><p className="opacity-70 text-[10px]">{dados.qtd} venda(s) registrada(s)</p></div>
                           <span className="text-cyan-500 font-black text-sm">R$ {dados.valor.toFixed(2)}</span>
                         </div>
                       ));
@@ -577,7 +556,6 @@ export default function App() {
             </div>
           )}
 
-          {/* PIPELINE DE COBRANÇA */}
           {abaAtiva === 'cob_pipeline' && (
             <div className="flex gap-4 overflow-x-auto h-[75vh] pb-4">
               {ESTAGIOS_COBRANCA.map(estagio => {
@@ -616,7 +594,6 @@ export default function App() {
             </div>
           )}
 
-          {/* CADASTRO DE CLIENTE (COBRANÇA) */}
           {abaAtiva === 'cob_cadastro' && (
             <div className={`${CardStyle} border p-6 rounded-3xl max-w-lg space-y-4`}>
               <h3 className="font-bold text-tema-primario border-b border-zinc-500/30 pb-2">Cadastro de Cliente (Cobrança)</h3>
@@ -639,7 +616,6 @@ export default function App() {
             </div>
           )}
 
-          {/* SUA AGENDA (COM OPÇÃO DE EXCLUIR E CONCLUIR) */}
           {(abaAtiva === 'cob_agenda' || abaAtiva === 'pos_agenda') && (
             <div className={`${CardStyle} border p-6 rounded-3xl space-y-4`}>
               <h3 className="font-bold text-tema-primario border-b border-zinc-500/30 pb-2">Sua Agenda de Retornos</h3>
@@ -663,7 +639,6 @@ export default function App() {
             </div>
           )}
 
-          {/* SCRIPT DE COBRANÇA / VENDAS */}
           {(abaAtiva === 'cob_scripts' || abaAtiva === 'pos_scripts') && (
             <div className="grid grid-cols-2 gap-6">
               <div className={`${CardStyle} border p-6 rounded-3xl space-y-4`}>
@@ -686,7 +661,6 @@ export default function App() {
             </div>
           )}
 
-          {/* CONTATOS (LISTA TELEFÔNICA / COBRANÇA) */}
           {abaAtiva === 'cob_contatos' && (
             <div className={`${CardStyle} border p-6 rounded-3xl space-y-4`}>
               <h3 className="font-bold text-tema-primario border-b border-zinc-500/30 pb-2">Contatos / Lista Telefônica (Cobrança)</h3>
@@ -702,7 +676,6 @@ export default function App() {
             </div>
           )}
 
-          {/* CHAT INTERNO */}
           {(abaAtiva === 'cob_chat' || abaAtiva === 'pos_chat') && (
             <div className={`${CardStyle} border p-6 rounded-3xl flex flex-col h-[70vh]`}>
               <h3 className="font-bold text-tema-primario border-b border-zinc-500/30 pb-2 mb-4">Chat Interno da Equipe</h3>
@@ -714,13 +687,12 @@ export default function App() {
                 ))}
               </div>
               <div className="flex space-x-2 pt-2 border-t border-zinc-500/30">
-                <input type="text" placeholder="Digite sua mensagem para a equipe..." value={novaMensagem} onChange={e=>setNovaMensagem(e.target.value)} onKeyDown={e=>{if(e.key==='Enter' && novaMensagem.trim()){setChatMensagens([...chatMensagens, {usuario: usuario.nome, texto: novaMensagem}]); setNovaMensagem('');}}} className={`flex-1 ${InputStyle} border p-3 rounded-xl text-xs`} />
+                <input type="text" placeholder="Digite sua mensagem..." value={novaMensagem} onChange={e=>setNovaMensagem(e.target.value)} onKeyDown={e=>{if(e.key==='Enter' && novaMensagem.trim()){setChatMensagens([...chatMensagens, {usuario: usuario.nome, texto: novaMensagem}]); setNovaMensagem('');}}} className={`flex-1 ${InputStyle} border p-3 rounded-xl text-xs`} />
                 <button onClick={()=>{if(novaMensagem.trim()){setChatMensagens([...chatMensagens, {usuario: usuario.nome, texto: novaMensagem}]); setNovaMensagem('');}}} className="bg-tema-primario px-6 rounded-xl font-bold"><Send className="w-4 h-4"/></button>
               </div>
             </div>
           )}
 
-          {/* PIPELINE VENDAS / PÓS-VENDAS */}
           {abaAtiva === 'pos_pipeline' && (
             <div className="flex gap-4 overflow-x-auto h-[75vh] pb-4">
               {ESTAGIOS_POS_VENDA.map(estagio => {
@@ -755,7 +727,6 @@ export default function App() {
             </div>
           )}
 
-          {/* CADASTRO DE CLIENTE (PÓS-VENDAS) */}
           {abaAtiva === 'pos_cadastro' && (
             <div className={`${CardStyle} border p-6 rounded-3xl max-w-lg space-y-4`}>
               <h3 className="font-bold text-tema-primario border-b border-zinc-500/30 pb-2">Cadastrar Cliente (Pós-Vendas / Vendas)</h3>
@@ -777,7 +748,6 @@ export default function App() {
             </div>
           )}
 
-          {/* CONTATOS ATIVOS (LISTA) */}
           {abaAtiva === 'pos_contatos' && (
             <div className={`${CardStyle} border p-6 rounded-3xl space-y-4`}>
               <h3 className="font-bold text-tema-primario border-b border-zinc-500/30 pb-2">Contatos Ativos (Vendas)</h3>
@@ -801,7 +771,6 @@ export default function App() {
             </div>
           )}
 
-          {/* LISTA DE UP-GRADE */}
           {abaAtiva === 'pos_upgrade' && (
             <div className={`${CardStyle} border p-6 rounded-3xl space-y-4`}>
               <h3 className="font-bold text-tema-primario border-b border-zinc-500/30 pb-2">Lista de Up-Grade de Planos</h3>
@@ -825,12 +794,11 @@ export default function App() {
             </div>
           )}
 
-          {/* USUÁRIOS E PERMISSÕES (ADMIN) */}
           {abaAtiva === 'admin_usuarios' && (
             <div className="grid grid-cols-3 gap-6">
               <div className={`${CardStyle} border p-6 rounded-3xl space-y-4 h-fit`}>
                 <h3 className="font-bold text-tema-primario border-b border-zinc-500/30 pb-2">Cadastrar Novo Usuário</h3>
-                <form onSubmit={(e)=>{e.preventDefault(); setUsuarios([...usuarios, {id: Date.now(), ...novoUsuario}]); alert('Usuário cadastrado com sucesso!'); setNovoUsuario({nome:'', email:'', cargo:'COBRADOR', senha:'123456'});}} className="space-y-3 text-xs">
+                <form onSubmit={(e)=>{e.preventDefault(); const atualizados = [...usuarios, {id: Date.now(), ...novoUsuario}]; setUsuarios(atualizados); localStorage.setItem('nexus_usuarios', JSON.stringify(atualizados)); alert('Usuário cadastrado com sucesso!'); setNovoUsuario({nome:'', email:'', cargo:'COBRADOR', senha:'123456'});}} className="space-y-3 text-xs">
                   <div><label className="block mb-1 font-semibold opacity-70">Nome</label><input type="text" required value={novoUsuario.nome} onChange={e=>setNovoUsuario({...novoUsuario, nome: e.target.value})} className={`w-full ${InputStyle} border p-3 rounded-xl`} /></div>
                   <div><label className="block mb-1 font-semibold opacity-70">E-mail</label><input type="email" required value={novoUsuario.email} onChange={e=>setNovoUsuario({...novoUsuario, email: e.target.value})} className={`w-full ${InputStyle} border p-3 rounded-xl`} /></div>
                   <div><label className="block mb-1 font-semibold opacity-70">Senha inicial</label><input type="password" required minLength={6} value={novoUsuario.senha} onChange={e=>setNovoUsuario({...novoUsuario, senha: e.target.value})} className={`w-full ${InputStyle} border p-3 rounded-xl`} /></div>
@@ -856,7 +824,7 @@ export default function App() {
                         <p className="font-bold">{u.nome}</p>
                         <p className="opacity-60 text-[10px]">{u.email} • Cargo: <span className="text-tema-primario font-bold">{u.cargo}</span></p>
                       </div>
-                      <button onClick={() => setUsuarios(usuarios.filter(x => x.id !== u.id))} className="text-red-500 p-2 hover:bg-red-500/15 rounded-lg"><Trash2 className="w-4 h-4"/></button>
+                      <button onClick={() => { const atualizados = usuarios.filter(x => x.id !== u.id); setUsuarios(atualizados); localStorage.setItem('nexus_usuarios', JSON.stringify(atualizados)); }} className="text-red-500 p-2 hover:bg-red-500/15 rounded-lg"><Trash2 className="w-4 h-4"/></button>
                     </div>
                   ))}
                 </div>
@@ -864,7 +832,6 @@ export default function App() {
             </div>
           )}
 
-          {/* IMPORTAR LISTAS (ADMIN) */}
           {abaAtiva === 'admin_listas' && (
             <>
             <div className="grid grid-cols-2 gap-6">
@@ -885,19 +852,10 @@ export default function App() {
                 )}
                 <input type="file" accept=".csv,.txt,text/csv,text/plain" onChange={handleSimularUpload} className="w-full text-xs opacity-70 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-zinc-500/20 hover:file:bg-zinc-500/30 cursor-pointer"/>
                 
-                <p className="text-[10px] opacity-60">Importação real de CSV/TXT. Colunas aceitas: ID, NOME, VALOR DEVEDOR, VALOR PLANO.</p>
                 {mensagemSistema && <p className="text-xs text-green-500">{mensagemSistema}</p>}
                 {previaPlanilha.length > 0 && (
                   <div className="p-4 bg-zinc-500/10 border border-zinc-500/20 rounded-2xl text-xs space-y-2">
                     <p className="font-bold text-tema-primario">Prévia Pronta: {previaPlanilha.length} registros encontrados.</p>
-                    <div className="space-y-1">
-                      {previaPlanilha.map((item, idx) => (
-                        <div key={idx} className="p-2 bg-black/20 rounded-lg flex justify-between items-center">
-                          <span><b>ID:</b> {item.codigo} | <b>Nome:</b> {item.nome}</span>
-                          {item.total_vencido && <span className="text-red-500 font-bold">Devedor: R$ {item.total_vencido}</span>}
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 )}
 
@@ -906,7 +864,7 @@ export default function App() {
             </div>
             <div className={`${CardStyle} border p-6 rounded-3xl space-y-4`}>
               <div className="flex flex-wrap justify-between items-center gap-3">
-                <div><h3 className="font-bold text-tema-primario">Gerenciamento e exclusão em massa</h3><p className="text-xs opacity-60 mt-1">Selecione registros individuais ou todos os registros de uma lista.</p></div>
+                <div><h3 className="font-bold text-tema-primario">Gerenciamento e exclusão em massa</h3></div>
                 <input value={filtroAdminLista} onChange={e=>setFiltroAdminLista(e.target.value)} placeholder="Filtrar por nome ou código..." className={`${InputStyle} border rounded-xl px-3 py-2 text-xs`} />
               </div>
               {Object.entries(dadosDasListas).map(([tipo, grupo]) => {
@@ -914,16 +872,12 @@ export default function App() {
                 const selecionados = listasSelecionadas[tipo];
                 return <section key={tipo} className="border border-zinc-500/20 rounded-2xl p-4 space-y-3">
                   <div className="flex flex-wrap justify-between items-center gap-2">
-                    <div><p className="font-bold text-sm">{grupo.titulo} <span className="opacity-60">({grupo.dados.length})</span></p><p className="text-[10px] opacity-60">{selecionados.length} selecionado(s)</p></div>
+                    <div><p className="font-bold text-sm">{grupo.titulo} <span className="opacity-60">({grupo.dados.length})</span></p></div>
                     <div className="flex flex-wrap gap-2">
-                      <button onClick={()=>selecionarTodosLista(tipo)} className="px-3 py-2 rounded-lg bg-zinc-500/15 text-xs font-bold">{selecionados.length === grupo.dados.length && grupo.dados.length ? 'Desmarcar todos' : 'Selecionar todos'}</button>
+                      <button onClick={()=>selecionarTodosLista(tipo)} className="px-3 py-2 rounded-lg bg-zinc-500/15 text-xs font-bold">Selecionar todos</button>
                       <button onClick={()=>excluirSelecionadosLista(tipo)} disabled={!selecionados.length} className="px-3 py-2 rounded-lg bg-red-600 text-white text-xs font-bold disabled:opacity-40">Excluir selecionados</button>
-                      <button onClick={()=>excluirListaInteira(tipo)} disabled={!grupo.dados.length} className="px-3 py-2 rounded-lg border border-red-500 text-red-500 text-xs font-bold disabled:opacity-40">Limpar lista inteira</button>
+                      <button onClick={()=>excluirListaInteira(tipo)} disabled={!grupo.dados.length} className="px-3 py-2 rounded-lg border border-red-500 text-red-500 text-xs font-bold disabled:opacity-40">Limpar lista</button>
                     </div>
-                  </div>
-                  <div className="max-h-56 overflow-y-auto space-y-1">
-                    {filtrados.map(item=><label key={item.id} className="flex items-center gap-3 p-2 rounded-lg bg-zinc-500/5 hover:bg-zinc-500/10 text-xs cursor-pointer"><input type="checkbox" checked={selecionados.includes(item.id)} onChange={()=>alternarSelecaoLista(tipo,item.id)} /><span className="font-semibold">{item.nome}</span><span className="opacity-50">{item.codigo || ''}</span><span className="ml-auto opacity-60">{tipo === 'cobranca' && item.total_vencido ? `Devedor: R$ ${parseFloat(item.total_vencido || 0).toFixed(2)}` : (tipo === 'pos_vendas' && item.valor_plano ? `Plano: R$ ${parseFloat(item.valor_plano || 0).toFixed(2)}` : (item.telefone || ''))}</span></label>)}
-                    {!filtrados.length && <p className="text-xs opacity-50 text-center py-3">Nenhum registro nesta lista ou filtro sem resultados.</p>}
                   </div>
                 </section>;
               })}
